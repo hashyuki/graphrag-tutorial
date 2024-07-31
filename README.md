@@ -90,9 +90,8 @@
     python -m graphrag.index --init --root ./ragtest
     ```
 
-    > [!NOTE]  
-    > この時`ragtest/.env`の`GRAPHRAG_API_KEY`に OPENAI_API_KEY が入っていることを確認する。  
-    > 入っていない場合は手動で入れる。
+    この時`ragtest/.env`の`GRAPHRAG_API_KEY`に OPENAI_API_KEY が入っていることを確認する。  
+    入っていない場合は手動で入れる。
 
     <details>
     <summary>この段階のディレクトリ構造</summary>
