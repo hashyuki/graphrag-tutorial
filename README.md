@@ -432,7 +432,7 @@
         │   ├── 20240731-220508
         │   │   └── reports
         │   │       └── indexing-engine.log
-        │   └── 20240731-223410
+        │   └── 20240801-212257
         │       ├── artifacts
         │       │   ├── create_base_documents.parquet
         │       │   ├── create_base_entity_graph.parquet
