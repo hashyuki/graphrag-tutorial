@@ -1,3 +1,5 @@
+import concurrent.futures
+
 import streamlit as st
 from openai import OpenAI
 from openai.types import ChatModel
@@ -97,40 +99,37 @@ def create_vector_store(client, uploaded_files, key):
     )
 
 
-def chat(client, user_query, key):
-    if f"thread_id_{key}" not in st.session_state:
+def chat(client, user_query, assistant_id, thread_id=None, chat_history=None):
+    if not thread_id:
         thread = client.beta.threads.create()
-        st.session_state[f"thread_id_{key}"] = thread.id
+        thread_id = thread.id
 
-    with st.chat_message("user"):
-        st.markdown(user_query)
+    if chat_history is None:
+        chat_history = []
 
-    st.session_state.setdefault(f"chat_history_{key}", []).append(
-        {"role": "user", "content": user_query}
-    )
+    # Append user message to chat history
+    chat_history.append({"role": "user", "content": user_query})
     client.beta.threads.messages.create(
-        thread_id=st.session_state[f"thread_id_{key}"], role="user", content=user_query
+        thread_id=thread_id, role="user", content=user_query
     )
 
-    with st.chat_message("assistant"):
-        stream = client.beta.threads.runs.create(
-            thread_id=st.session_state[f"thread_id_{key}"],
-            assistant_id=st.session_state[f"assistant_id_{key}"],
-            stream=True,
-        )
+    # Fetch assistant reply
+    assistant_reply = ""
+    stream = client.beta.threads.runs.create(
+        thread_id=thread_id,
+        assistant_id=assistant_id,
+        stream=True,
+    )
 
-        assistant_reply_box = st.empty()
-        assistant_reply = ""
+    for event in stream:
+        if isinstance(event, ThreadMessageDelta):
+            if isinstance(event.data.delta.content[0], TextDeltaBlock):
+                assistant_reply += event.data.delta.content[0].text.value
 
-        for event in stream:
-            if isinstance(event, ThreadMessageDelta):
-                if isinstance(event.data.delta.content[0], TextDeltaBlock):
-                    assistant_reply += event.data.delta.content[0].text.value
-                    assistant_reply_box.markdown(assistant_reply)
+    chat_history.append({"role": "assistant", "content": assistant_reply})
 
-        st.session_state[f"chat_history_{key}"].append(
-            {"role": "assistant", "content": assistant_reply}
-        )
+    # Returning results instead of updating UI directly within this function
+    return thread_id, chat_history, user_query, assistant_reply
 
 
 def main():
@@ -153,22 +152,67 @@ def main():
 
     cols = st.columns(2)
     with cols[0]:
-        chat_history = st.session_state.get("chat_history_left", [])
-        for message in chat_history:
+        chat_history_left = st.session_state.get("chat_history_left", [])
+        for message in chat_history_left:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
     with cols[1]:
-        chat_history = st.session_state.get("chat_history_right", [])
-        for message in chat_history:
+        chat_history_right = st.session_state.get("chat_history_right", [])
+        for message in chat_history_right:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
     if user_query := st.chat_input("Ask me a question"):
+        with st.spinner("生成中"):
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = {
+                    "left": executor.submit(
+                        chat,
+                        client,
+                        user_query,
+                        st.session_state.get("assistant_id_left"),
+                        st.session_state.get("thread_id_left"),
+                        chat_history_left,
+                    ),
+                    "right": executor.submit(
+                        chat,
+                        client,
+                        user_query,
+                        st.session_state.get("assistant_id_right"),
+                        st.session_state.get("thread_id_right"),
+                        chat_history_right,
+                    ),
+                }
+
+                results = {key: future.result() for key, future in futures.items()}
+
+        # Update the session state with the results
+        (
+            st.session_state["thread_id_left"],
+            st.session_state["chat_history_left"],
+            user_query_left,
+            assistant_reply_left,
+        ) = results["left"]
+        (
+            st.session_state["thread_id_right"],
+            st.session_state["chat_history_right"],
+            user_query_right,
+            assistant_reply_right,
+        ) = results["right"]
+
+        # Update the UI in the main thread
         with cols[0]:
-            chat(client, user_query, "left")
+            with st.chat_message("user"):
+                st.markdown(user_query_left)
+            with st.chat_message("assistant"):
+                st.markdown(assistant_reply_left)
+
         with cols[1]:
-            chat(client, user_query, "right")
+            with st.chat_message("user"):
+                st.markdown(user_query_right)
+            with st.chat_message("assistant"):
+                st.markdown(assistant_reply_right)
 
 
 if __name__ == "__main__":
