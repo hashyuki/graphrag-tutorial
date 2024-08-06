@@ -15,7 +15,7 @@ def create_llm_setting(client, key):
             key=f"{key}-radio",
         )
 
-        with st.container(border=True):
+        with st.container():
             if assistant_init_method == "新規で作成する":
                 create_new_assistant(client, key)
             else:
@@ -34,9 +34,11 @@ def create_llm_setting(client, key):
         ):
             create_vector_store(client, uploaded_files, key)
 
-        if not st.session_state.get(f"assistant_id_{key}"):
+        assistant_id = st.session_state.get(f"assistant_id_{key}")
+        if not assistant_id:
             st.warning("LLMの設定を正しくして下さい。")
             return 0
+        return 1
 
 
 def create_new_assistant(client, key):
@@ -46,7 +48,7 @@ def create_new_assistant(client, key):
         value="あなたはAIアシスタントです。質問に日本語で回答してください。",
         key=f"{key}-instructions-input",
     )
-    st.session_state["llm_model"] = st.selectbox(
+    model = st.selectbox(
         "LLM model",
         options=model_list,
         index=model_list.index("gpt-4o-mini"),  # defaultでgpt-4o-miniを選択
@@ -57,7 +59,7 @@ def create_new_assistant(client, key):
         assistant = client.beta.assistants.create(
             name="RAG Demo on Streamlit",
             instructions=instructions,
-            model=st.session_state["llm_model"],
+            model=model,
             tools=[{"type": "file_search"}],
         )
         st.session_state[f"assistant_id_{key}"] = assistant.id
@@ -106,7 +108,6 @@ def chat(client, user_query, key):
     st.session_state.setdefault(f"chat_history_{key}", []).append(
         {"role": "user", "content": user_query}
     )
-
     client.beta.threads.messages.create(
         thread_id=st.session_state[f"thread_id_{key}"], role="user", content=user_query
     )
@@ -124,7 +125,6 @@ def chat(client, user_query, key):
         for event in stream:
             if isinstance(event, ThreadMessageDelta):
                 if isinstance(event.data.delta.content[0], TextDeltaBlock):
-                    assistant_reply_box.empty()
                     assistant_reply += event.data.delta.content[0].text.value
                     assistant_reply_box.markdown(assistant_reply)
 
@@ -136,16 +136,11 @@ def chat(client, user_query, key):
 def main():
     st.set_page_config(layout="wide")
 
-    st.session_state["openai_api_key"] = st.text_input(
-        "OpenAI API Key",
-        type="password",
-        placeholder="sk-****",
-        key="api-key-input",
-    )
-    if not st.session_state["openai_api_key"]:
+    api_key = st.text_input("OpenAI API Key", type="password", placeholder="sk-****")
+    if not api_key:
         return
 
-    client = OpenAI(api_key=st.session_state["openai_api_key"])
+    client = OpenAI(api_key=api_key)
     cols = st.columns(2)
 
     with cols[0]:
