@@ -87,9 +87,9 @@ def llm_setting(client, key):
 
 
 def chat(client, user_query, key):
-    if "thread_id_{key}" not in st.session_state:
+    if f"thread_id_{key}" not in st.session_state:
         thread = client.beta.threads.create()
-        st.session_state.thread_id = thread.id
+        st.session_state[f"thread_id_{key}"] = thread.id
 
     with st.chat_message("user"):
         st.markdown(user_query)
@@ -99,12 +99,12 @@ def chat(client, user_query, key):
     )
 
     client.beta.threads.messages.create(
-        thread_id=st.session_state.thread_id, role="user", content=user_query
+        thread_id=st.session_state[f"thread_id_{key}"], role="user", content=user_query
     )
 
     with st.chat_message("assistant"):
         stream = client.beta.threads.runs.create(
-            thread_id=st.session_state.thread_id,
+            thread_id=st.session_state[f"thread_id_{key}"],
             assistant_id=st.session_state[f"assistant_id_{key}"],
             stream=True,
         )
