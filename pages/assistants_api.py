@@ -13,13 +13,13 @@ def main(api_key):
     if not assistant_id:
         return
 
-    if user_query := st.chat_input("Ask me a question"):
-        if "chat_history" not in st.session_state:
-            st.session_state["chat_history"] = []
-        for message in st.session_state["chat_history"]:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+    if "chat_history" not in st.session_state:
+        st.session_state["chat_history"] = []
+    for message in st.session_state["chat_history"]:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
+    if user_query := st.chat_input("Ask me a question"):
         # ユーザーの質問を表示・会話履歴に追加
         with st.chat_message("user"):
             st.markdown(user_query)

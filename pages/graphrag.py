@@ -1,6 +1,7 @@
 import random
 
 import streamlit as st
+from openai import OpenAI
 
 import common
 import tools
@@ -9,10 +10,11 @@ import tools.graphrag
 
 def main(api_key):
     random.seed(42)
-    graph_store_id = common.setting_graprag()
+    client = OpenAI(api_key=api_key)
+    assistant_id, thread_id, graph_store_id = common.setting_graprag(client)
     if not graph_store_id:
         return
-    search_engine = tools.graphrag.global_search.create(
+    tools.graphrag.graph_rag.create(
         f"./data/graphrag/{graph_store_id}", api_key, "gpt-4o-mini"
     )
 
@@ -32,11 +34,14 @@ def main(api_key):
 
         # アシスタントの回答を表示・会話履歴に追加
         with st.chat_message("assistant"):
-            assistant_reply = search_engine.search(user_query)
-            st.session_state["chat_history"].append(
-                {"role": "assistant", "content": assistant_reply.response}
+            pre_reply = tools.graphrag.graph_rag.chat(user_query)
+            assistant_reply = common.creat_assistant_reply(
+                client, assistant_id, thread_id, pre_reply
             )
-        st.rerun()
+
+            st.session_state["chat_history"].append(
+                {"role": "assistant", "content": assistant_reply}
+            )
 
 
 if __name__ == "__main__":

@@ -30,7 +30,7 @@ def setting_assistant(client):
             key=random.random(),
         )
 
-        # RAGをしたい場合は対象のファイルをアップロード
+        # RAG対象のIDを入力
         vector_store_id = st.text_input(
             "VectorStore ID",
             type="password",
@@ -44,26 +44,41 @@ def setting_assistant(client):
 
     # assistant_idに対応したthreadを作成。
     @st.cache_resource()
-    def create_thread(key):
+    def create_thread(key1, key2):
         thread = client.beta.threads.create()
         return thread.id
 
-    thread_id = create_thread(assistant_id)
+    thread_id = create_thread(assistant_id, vector_store_id)
     return assistant_id, thread_id
 
 
-def setting_graprag():
+def setting_graprag(client):
     with st.container(border=True):
-        assistant_id = ""
         # assistant idを入力
-        graph_store_id = st.text_input(
-            "GraphStore ID",
+        assistant_id = st.text_input(
+            "Assistant ID",
             type="password",
-            placeholder="gs-****",
+            placeholder="asst-****",
             key=random.random(),
         )
 
-    return graph_store_id
+        # RAG対象のIDを入力
+        graph_store_id = st.text_input(
+            "GraphStore ID",
+            type="password",
+            placeholder="gs_****",
+            key=random.random(),
+        )
+
+    # assistant_idに対応したthreadを作成。
+    @st.cache_resource()
+    def create_thread(key1, key2):
+        thread = client.beta.threads.create()
+        return thread.id
+
+    thread_id = create_thread(assistant_id, graph_store_id)
+
+    return assistant_id, thread_id, graph_store_id
 
 
 def update_assistant(client, assistant_id, vector_store_id):
