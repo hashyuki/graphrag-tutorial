@@ -6,9 +6,8 @@ import streamlit as st
 from openai import OpenAI
 from openai.types import ChatModel
 
-import common
-import tools
-import tools.graphrag
+from pages.util import graph_store
+from pages.util import streamlit_components as stc
 
 
 def create_assistant(api_key):
@@ -52,7 +51,11 @@ def create_vector_store(api_key):
             accept_multiple_files=True,
             key="vector",
         )
-        if st.button("Create VectorStore", use_container_width=True):
+        if st.button(
+            "Create VectorStore",
+            use_container_width=True,
+            disabled=(len(uploaded_files) == 0),
+        ):
             tmp_file_paths = []
             for uploaded_file in uploaded_files:
                 bytes_data = uploaded_file.getvalue()
@@ -83,7 +86,11 @@ def create_graph_store(api_key):
         uploaded_files = st.file_uploader(
             "RAGの対象ファイルをアップロード", accept_multiple_files=True, key="graph"
         )
-        if st.button("Create GraphStore", use_container_width=True):
+        if st.button(
+            "Create GraphStore",
+            use_container_width=True,
+            disabled=(len(uploaded_files) == 0),
+        ):
             graph_store_id = "gs_" + "".join(
                 random.choices(string.ascii_letters + string.digits, k=24)
             )
@@ -97,7 +104,7 @@ def create_graph_store(api_key):
                 with open(location, "wb") as f:
                     f.write(bytes_data)
 
-            tools.graphrag.graph_store.create(
+            graph_store.create(
                 f"./data/graphrag/{graph_store_id}", api_key, "gpt-4o-mini"
             )
 
@@ -117,7 +124,8 @@ def main():
 
 
 if __name__ == "__main__":
-    common.init_state()
-    common.sidebar()
+    st.set_page_config(layout="centered")
+    stc.init_state()
+    stc.sidebar()
 
     main()

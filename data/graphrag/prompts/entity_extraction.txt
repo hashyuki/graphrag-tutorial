@@ -28,25 +28,25 @@ Example 1:
 
 Entity_types: [person, technology, mission, organization, location]
 Text:
-while Alex clenched his jaw, the buzz of frustration dull against the backdrop of Taylor's authoritarian certainty. It was this competitive undercurrent that kept him alert, the sense that his and Jordan's shared commitment to discovery was an unspoken rebellion against Cruz's narrowing vision of control and order.
+アレックスが顎を強く噛みしめる一方で、テイラーの独裁的な確信を背景に、イライラの感覚は鈍くなっていた。この競争的な緊張感が彼を警戒させ、クルーズの制御と秩序に対する狭い視点に対して、彼とジョーダンが共に抱いている発見への献身が暗黙の反抗であるという感覚を強くしていた。
 
-Then Taylor did something unexpected. They paused beside Jordan and, for a moment, observed the device with something akin to reverence. “If this tech can be understood..." Taylor said, their voice quieter, "It could change the game for us. For all of us.”
+そのとき、テイラーが予想外の行動に出た。ジョーダンの隣で立ち止まり、しばしその装置をまるで敬意を払うかのように見つめた。「もしこの技術が理解できれば……」とテイラーは静かな声で言った。「私たちにとって、いや、全員にとって状況が変わるかもしれない。」
 
-The underlying dismissal earlier seemed to falter, replaced by a glimpse of reluctant respect for the gravity of what lay in their hands. Jordan looked up, and for a fleeting heartbeat, their eyes locked with Taylor's, a wordless clash of wills softening into an uneasy truce.
+先ほどの軽蔑は揺らぎ、手に持ったものの重大さに対する不本意ながらの敬意が垣間見えた。ジョーダンは顔を上げ、一瞬だけ、テイラーの目と視線が交差し、言葉なき意志の衝突が不安な休戦へと和らいだ。
 
-It was a small transformation, barely perceptible, but one that Alex noted with an inward nod. They had all been brought here by different paths
+それはわずかな変化であり、ほとんど気づかれないものだったが、アレックスは内心でそれを確認した。彼ら全員がそれぞれ異なる道を経てここにたどり着いたのだった。
 ################
 Output:
-("entity"{tuple_delimiter}"Alex"{tuple_delimiter}"person"{tuple_delimiter}"Alex is a character who experiences frustration and is observant of the dynamics among other characters."){record_delimiter}
-("entity"{tuple_delimiter}"Taylor"{tuple_delimiter}"person"{tuple_delimiter}"Taylor is portrayed with authoritarian certainty and shows a moment of reverence towards a device, indicating a change in perspective."){record_delimiter}
-("entity"{tuple_delimiter}"Jordan"{tuple_delimiter}"person"{tuple_delimiter}"Jordan shares a commitment to discovery and has a significant interaction with Taylor regarding a device."){record_delimiter}
-("entity"{tuple_delimiter}"Cruz"{tuple_delimiter}"person"{tuple_delimiter}"Cruz is associated with a vision of control and order, influencing the dynamics among other characters."){record_delimiter}
-("entity"{tuple_delimiter}"The Device"{tuple_delimiter}"technology"{tuple_delimiter}"The Device is central to the story, with potential game-changing implications, and is revered by Taylor."){record_delimiter}
-("relationship"{tuple_delimiter}"Alex"{tuple_delimiter}"Taylor"{tuple_delimiter}"Alex is affected by Taylor's authoritarian certainty and observes changes in Taylor's attitude towards the device."{tuple_delimiter}7){record_delimiter}
-("relationship"{tuple_delimiter}"Alex"{tuple_delimiter}"Jordan"{tuple_delimiter}"Alex and Jordan share a commitment to discovery, which contrasts with Cruz's vision."{tuple_delimiter}6){record_delimiter}
-("relationship"{tuple_delimiter}"Taylor"{tuple_delimiter}"Jordan"{tuple_delimiter}"Taylor and Jordan interact directly regarding the device, leading to a moment of mutual respect and an uneasy truce."{tuple_delimiter}8){record_delimiter}
-("relationship"{tuple_delimiter}"Jordan"{tuple_delimiter}"Cruz"{tuple_delimiter}"Jordan's commitment to discovery is in rebellion against Cruz's vision of control and order."{tuple_delimiter}5){record_delimiter}
-("relationship"{tuple_delimiter}"Taylor"{tuple_delimiter}"The Device"{tuple_delimiter}"Taylor shows reverence towards the device, indicating its importance and potential impact."{tuple_delimiter}9){completion_delimiter}
+("entity"{tuple_delimiter}"アレックス"{tuple_delimiter}"person"{tuple_delimiter}"アレックスは苛立ちを経験し、他の登場人物の力関係をよく観察している人物だ。"){record_delimiter}
+("entity"{tuple_delimiter}"テイラー"{tuple_delimiter}"person"{tuple_delimiter}"テイラーは権威主義的な確信を持って描かれ、ある装置に対して畏敬の念を示す瞬間があり、視点の変化を示している。"){record_delimiter}
+("entity"{tuple_delimiter}"ジョーダン"{tuple_delimiter}"person"{tuple_delimiter}"ジョーダンは忖度へのこだわりを共有し、ある装置に関してテイラーと重要なやりとりをする。"){record_delimiter}
+("entity"{tuple_delimiter}"クルーズ"{tuple_delimiter}"person"{tuple_delimiter}"クルーズは支配と秩序のビジョンに関連しており、他のキャラクター間の力学に影響を与える。"){record_delimiter}
+("entity"{tuple_delimiter}"その装置"{tuple_delimiter}"technology"{tuple_delimiter}"このデバイスはストーリーの中心的存在であり、ゲームの流れを変える可能性があり、テイラーに崇拝されている。"){record_delimiter}
+("relationship"{tuple_delimiter}"アレックス"{tuple_delimiter}"Taylor"{tuple_delimiter}"アレックスはテイラーの権威主義的な確信に影響され、装置に対するテイラーの態度の変化を観察する。"{tuple_delimiter}7){record_delimiter}
+("relationship"{tuple_delimiter}"アレックス"{tuple_delimiter}"Jordan"{tuple_delimiter}"アレックスとジョーダンは、クルーズのビジョンとは対照的な発見へのコミットメントを共有している。"{tuple_delimiter}6){record_delimiter}
+("relationship"{tuple_delimiter}"テイラー"{tuple_delimiter}"Jordan"{tuple_delimiter}"アイラーとジョーダンは装置に関して直接対話し、お互いを尊重し、不安な停戦の瞬間を迎える。"{tuple_delimiter}8){record_delimiter}
+("relationship"{tuple_delimiter}"ジョーダン"{tuple_delimiter}"Cruz"{tuple_delimiter}"ジョーダンの発見へのこだわりは、クルーズの支配と秩序というビジョンへの反抗である。"{tuple_delimiter}5){record_delimiter}
+("relationship"{tuple_delimiter}"テイラー"{tuple_delimiter}"The Device"{tuple_delimiter}"テイラーはこの装置に敬意を示し、その重要性と潜在的な影響力を示している。"{tuple_delimiter}9){completion_delimiter}
 #############################
 Example 2:
 

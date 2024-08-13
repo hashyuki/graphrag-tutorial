@@ -1,25 +1,8 @@
 import asyncio
-import shutil
-import time
-import warnings
 from typing import Any
 
 import pandas as pd
 import tiktoken
-import uvloop
-import yaml
-from azure.identity import DefaultAzureCredential, get_bearer_token_provider
-from graphrag.config import (
-    GraphRagConfig,
-    LLMType,
-    create_graphrag_config,
-)
-from graphrag.index import PipelineConfig, create_pipeline_config
-from graphrag.index.run import run_pipeline_with_config
-from graphrag.model import (
-    CommunityReport,
-    Entity,
-)
 from graphrag.query.context_builder.builders import GlobalContextBuilder
 from graphrag.query.context_builder.conversation_history import (
     ConversationHistory,
@@ -36,175 +19,51 @@ from graphrag.query.structured_search.base import SearchResult
 from graphrag.query.structured_search.global_search.community_context import (
     GlobalCommunityContext,
 )
-from graphrag.query.structured_search.global_search.search import GlobalSearch
+from graphrag.query.structured_search.global_search.search import (
+    DEFAULT_MAP_LLM_PARAMS,
+    DEFAULT_REDUCE_LLM_PARAMS,
+    GlobalSearch,
+)
+from graphrag.query.structured_search.local_search.search import LocalSearch
 
-DEFAULT_MAP_LLM_PARAMS = {
-    "max_tokens": 1000,
-    "temperature": 0.0,
-}
-
-DEFAULT_REDUCE_LLM_PARAMS = {
-    "max_tokens": 2000,
-    "temperature": 0.0,
-}
-warnings.filterwarnings("ignore")
+from .common import create_graphrag_config_from_yaml
 
 
-class GraphStore:
-    def __init__(self, config_path: str = "config/graphrag.yaml"):
-        self.config_path = config_path
+def create_global_search_engine(
+    root: str,
+    api_key: str,
+    llm_model: str,
+    config_path: str = "config/graphrag.yaml",
+) -> GlobalSearch:
+    """Run a global search with the given query."""
+    config = create_graphrag_config_from_yaml(root, config_path, api_key, llm_model)
 
-    def create(
-        self,
-        root: str,
-        api_key: str,
-        llm_model: str,
-    ):
-        """Run the pipeline with the given config."""
-        run_id = "default"
-        _ = shutil.copytree(
-            "data/graphrag/prompts", f"{root}/prompts", dirs_exist_ok=True
-        )
-
-        graphrag_config: str | PipelineConfig = _create_graphrag_config(
-            root, self.config_path, api_key, llm_model
-        )
-        pipeline_config = create_pipeline_config(graphrag_config)
-
-        def _run_workflow_async() -> None:
-            async def execute():
-                async for output in run_pipeline_with_config(
-                    pipeline_config,
-                    run_id=run_id,
-                ):
-                    if output.errors and len(output.errors) > 0:
-                        return
-
-            uvloop.install()
-
-            asyncio.run(execute())
-
-        _run_workflow_async()
-
-    def _create_default_config(
-        self,
-        root_dir: str,
-        api_key: str,
-        llm_model: str,
-    ) -> PipelineConfig:
-        """Overlay default values on an existing config or create a default config if none is provided."""
-        with open(self.config_path, "rb") as file:
-            content = file.read().decode(encoding="utf-8", errors="strict")
-            content = content.replace("${OPENAI_API_KEY}", api_key)
-            content = content.replace("${LLM_MODEL}", llm_model)
-            data = yaml.safe_load(content)
-            parameters = create_graphrag_config(data, root_dir)
-
-        result = create_pipeline_config(parameters)
-        return result
-
-
-graph_store = GraphStore()
-
-
-class GraphRAG:
-    def __init__(self, config_path: str = "config/graphrag.yaml"):
-        self.config_path = config_path
-
-    def create(
-        self,
-        root: str,
-        api_key: str,
-        llm_model: str,
-    ):
-        """Run a global search with the given query."""
-        config = _create_graphrag_config(root, self.config_path, api_key, llm_model)
-
-        data_dir = f"{root}/output/default/artifacts"
-        final_nodes: pd.DataFrame = pd.read_parquet(
-            f"{data_dir}/create_final_nodes.parquet"
-        )
-        final_entities: pd.DataFrame = pd.read_parquet(
-            f"{data_dir}/create_final_entities.parquet"
-        )
-        final_community_reports: pd.DataFrame = pd.read_parquet(
-            f"{data_dir}/create_final_community_reports.parquet"
-        )
-
-        reports = read_indexer_reports(final_community_reports, final_nodes, 2)
-        entities = read_indexer_entities(final_nodes, final_entities, 2)
-        self.search_engine = get_global_search_engine(
-            config,
-            reports=reports,
-            entities=entities,
-            response_type="multiple paragraphs",
-        )
-
-    def chat(self, query):
-        result = self.search_engine.search(query)
-        return result
-
-
-def _create_graphrag_config(root_dir, config_path: str, api_key, llm_model):
-    with open(config_path, "rb") as file:
-        import yaml
-
-        content = file.read().decode(encoding="utf-8", errors="strict")
-        content = content.replace("${OPENAI_API_KEY}", api_key)
-        content = content.replace("${LLM_MODEL}", llm_model)
-        data = yaml.safe_load(content)
-        return create_graphrag_config(data, root_dir)
-
-
-def get_llm(config: GraphRagConfig) -> ChatOpenAI:
-    """Get the LLM client."""
-    is_azure_client = (
-        config.llm.type == LLMType.AzureOpenAIChat
-        or config.llm.type == LLMType.AzureOpenAI
+    data_dir = f"{root}/output/default/artifacts"
+    final_nodes: pd.DataFrame = pd.read_parquet(
+        f"{data_dir}/create_final_nodes.parquet"
     )
-    debug_llm_key = config.llm.api_key or ""
-    llm_debug_info = {
-        **config.llm.model_dump(),
-        "api_key": f"REDACTED,len={len(debug_llm_key)}",
-    }
-    if config.llm.cognitive_services_endpoint is None:
-        cognitive_services_endpoint = "https://cognitiveservices.azure.com/.default"
-    else:
-        cognitive_services_endpoint = config.llm.cognitive_services_endpoint
-    print(f"creating llm client with {llm_debug_info}")  # noqa T201
-    return ChatOpenAI(
-        api_key=config.llm.api_key,
-        azure_ad_token_provider=(
-            get_bearer_token_provider(
-                DefaultAzureCredential(), cognitive_services_endpoint
-            )
-            if is_azure_client and not config.llm.api_key
-            else None
-        ),
-        api_base=config.llm.api_base,
-        organization=config.llm.organization,
-        model=config.llm.model,
-        api_type=OpenaiApiType.AzureOpenAI if is_azure_client else OpenaiApiType.OpenAI,
-        deployment_name=config.llm.deployment_name,
-        api_version=config.llm.api_version,
-        max_retries=config.llm.max_retries,
+    final_entities: pd.DataFrame = pd.read_parquet(
+        f"{data_dir}/create_final_entities.parquet"
+    )
+    final_community_reports: pd.DataFrame = pd.read_parquet(
+        f"{data_dir}/create_final_community_reports.parquet"
     )
 
-
-def get_global_search_engine(
-    config: GraphRagConfig,
-    reports: list[CommunityReport],
-    entities: list[Entity],
-    response_type: str,
-):
-    """Create a global search engine based on data + configuration."""
+    reports = read_indexer_reports(final_community_reports, final_nodes, 2)
+    entities = read_indexer_entities(final_nodes, final_entities, 2)
     token_encoder = tiktoken.get_encoding(config.encoding_model)
     gs_config = config.global_search
-
-    return GlobalSearch2(
-        llm=get_llm(config),
+    return GlobalSearchForAssistantsAPI(
+        llm=ChatOpenAI(
+            api_key=api_key,
+            model=llm_model,
+            api_type=OpenaiApiType.OpenAI,  # OpenaiApiType.OpenAI or OpenaiApiType.AzureOpenAI
+            max_retries=20,
+        ),
         context_builder=GlobalCommunityContext(
-            community_reports=reports, entities=entities, token_encoder=token_encoder
+            community_reports=reports,
+            entities=entities,
+            token_encoder=token_encoder,
         ),
         token_encoder=token_encoder,
         max_data_tokens=gs_config.data_max_tokens,
@@ -235,11 +94,15 @@ def get_global_search_engine(
             "context_name": "Reports",
         },
         concurrent_coroutines=gs_config.concurrency,
-        response_type=response_type,
+        response_type="multiple paragraphs",
     )
 
 
-class GlobalSearch2(GlobalSearch):
+class GlobalSearchForAssistantsAPI(GlobalSearch):
+    """
+    AssistantsAPIを利用するために、最終的な入力を返却するように修正したGlobalSearch
+    """
+
     def __init__(
         self,
         llm: BaseLLM,
@@ -274,16 +137,7 @@ class GlobalSearch2(GlobalSearch):
         conversation_history: ConversationHistory | None = None,
         **kwargs: Any,
     ):
-        """
-        Perform a global search.
-
-        Global search mode includes two steps:
-
-        - Step 1: Run parallel LLM calls on communities' short summaries to generate answer for each batch
-        - Step 2: Combine the answers from step 2 to generate the final answer
-        """
         # Step 1: Generate answers for each batch of community short summaries
-        start_time = time.time()
         context_chunks, context_records = self.context_builder.build_context(
             conversation_history=conversation_history, **self.context_builder_params
         )
@@ -302,8 +156,6 @@ class GlobalSearch2(GlobalSearch):
         if self.callbacks:
             for callback in self.callbacks:
                 callback.on_map_response_end(map_responses)
-        map_llm_calls = sum(response.llm_calls for response in map_responses)
-        map_prompt_tokens = sum(response.prompt_tokens for response in map_responses)
 
         # Step 2: Combine the intermediate answers from step 2 to generate the final answer
         reduce_response = await self._reduce_response(
@@ -320,10 +172,8 @@ class GlobalSearch2(GlobalSearch):
         query: str,
         **llm_kwargs,
     ):
-        """Combine all intermediate responses from single batches into a final answer to the user query."""
         text_data = ""
         search_prompt = ""
-        start_time = time.time()
         try:
             # collect all key points into a single list to prepare for sorting
             key_points = []
@@ -393,4 +243,6 @@ class GlobalSearch2(GlobalSearch):
             return 0
 
 
-graph_rag = GraphRAG()
+class LocalSearchForAssistantsAPI(LocalSearch):
+    # TODO
+    pass

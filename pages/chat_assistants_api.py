@@ -3,19 +3,18 @@ import random
 import streamlit as st
 from openai import OpenAI
 
-import common
+from pages.util import streamlit_components as stc
 
 
-def main(api_key):
-    random.seed(42)
+def chat(api_key):
     client = OpenAI(api_key=api_key)
-    assistant_id, thread_id = common.setting_assistant(client)
+    assistant_id, thread_id = stc.setting_assistant(client)
     if not assistant_id:
         return
 
-    if "chat_history" not in st.session_state:
-        st.session_state["chat_history"] = []
-    for message in st.session_state["chat_history"]:
+    if thread_id not in st.session_state:
+        st.session_state[thread_id] = []
+    for message in st.session_state[thread_id]:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
@@ -23,26 +22,30 @@ def main(api_key):
         # ユーザーの質問を表示・会話履歴に追加
         with st.chat_message("user"):
             st.markdown(user_query)
-            st.session_state["chat_history"].append(
-                {"role": "user", "content": user_query}
-            )
+            st.session_state[thread_id].append({"role": "user", "content": user_query})
 
         # アシスタントの回答を表示・会話履歴に追加
         with st.chat_message("assistant"):
-            assistant_reply = common.creat_assistant_reply(
+            assistant_reply = stc.creat_assistant_reply(
                 client, assistant_id, thread_id, user_query
             )
-            st.session_state["chat_history"].append(
+            st.session_state[thread_id].append(
                 {"role": "assistant", "content": assistant_reply}
             )
 
 
-if __name__ == "__main__":
-    st.set_page_config(layout="centered")
-    common.init_state()
-    common.sidebar()
-
+def main():
     if not st.session_state["api_key"]:
         st.warning("OpenAI API Keyが設定されていません。")
-    else:
-        main(st.session_state["api_key"])
+        return
+
+    chat(st.session_state["api_key"])
+
+
+if __name__ == "__main__":
+    random.seed(42)
+    st.set_page_config(layout="centered")
+    stc.init_state()
+    stc.sidebar()
+
+    main()

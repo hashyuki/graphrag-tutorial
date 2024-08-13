@@ -11,12 +11,14 @@ def init_state():
 
 
 def sidebar():
-    st.session_state["api_key"] = st.sidebar.text_input(
+    api_key = st.sidebar.text_input(
         "OpenAI API Key",
         type="password",
         placeholder="sk-****",
         value=st.session_state["api_key"],
     )
+
+    st.session_state["api_key"] = api_key
 
 
 def setting_assistant(client):
@@ -26,7 +28,7 @@ def setting_assistant(client):
         assistant_id = st.text_input(
             "Assistant ID",
             type="password",
-            placeholder="asst-****",
+            placeholder="asst_****",
             key=random.random(),
         )
 
@@ -34,13 +36,13 @@ def setting_assistant(client):
         vector_store_id = st.text_input(
             "VectorStore ID",
             type="password",
-            placeholder="vs-****",
+            placeholder="vs_****",
             disabled=(assistant_id == ""),
             key=random.random(),
         )
 
-        if assistant_id:
-            update_assistant(client, assistant_id, vector_store_id)
+        if len(assistant_id) == 29 and assistant_id.startswith("asst_"):
+            _update_assistant(client, assistant_id, vector_store_id)
 
     # assistant_idに対応したthreadを作成。
     @st.cache_resource()
@@ -58,7 +60,7 @@ def setting_graprag(client):
         assistant_id = st.text_input(
             "Assistant ID",
             type="password",
-            placeholder="asst-****",
+            placeholder="asst_****",
             key=random.random(),
         )
 
@@ -67,6 +69,7 @@ def setting_graprag(client):
             "GraphStore ID",
             type="password",
             placeholder="gs_****",
+            disabled=(assistant_id == ""),
             key=random.random(),
         )
 
@@ -81,7 +84,7 @@ def setting_graprag(client):
     return assistant_id, thread_id, graph_store_id
 
 
-def update_assistant(client, assistant_id, vector_store_id):
+def _update_assistant(client, assistant_id, vector_store_id):
     if len(vector_store_id) == 27:
         client.beta.assistants.update(
             assistant_id=assistant_id,
