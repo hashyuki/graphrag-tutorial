@@ -1,4 +1,6 @@
+import asyncio
 import random
+from functools import partial
 
 import streamlit as st
 from openai.types.beta.assistant_stream_event import ThreadMessageDelta
@@ -42,7 +44,7 @@ def setting_assistant(client):
         )
 
         if len(assistant_id) == 29 and assistant_id.startswith("asst_"):
-            _update_assistant(client, assistant_id, vector_store_id)
+            update_assistant(client, assistant_id, vector_store_id)
 
     # assistant_idに対応したthreadを作成。
     @st.cache_resource()
@@ -84,7 +86,7 @@ def setting_graprag(client):
     return assistant_id, thread_id, graph_store_id
 
 
-def _update_assistant(client, assistant_id, vector_store_id):
+def update_assistant(client, assistant_id, vector_store_id):
     if len(vector_store_id) == 27:
         client.beta.assistants.update(
             assistant_id=assistant_id,
@@ -115,4 +117,39 @@ def creat_assistant_reply(client, assistant_id, thread_id, user_query):
             if isinstance(event.data.delta.content[0], TextDeltaBlock):
                 assistant_reply += event.data.delta.content[0].text.value
                 assistant_reply_box.markdown(assistant_reply)
+    return assistant_reply
+
+
+async def create_assistant_reply_async(client, assistant_id, thread_id, user_query):
+    loop = asyncio.get_event_loop()
+
+    await loop.run_in_executor(
+        None,
+        partial(
+            client.beta.threads.messages.create,
+            thread_id=thread_id,
+            role="user",
+            content=user_query,
+        ),
+    )
+
+    stream = await loop.run_in_executor(
+        None,
+        partial(
+            client.beta.threads.runs.create,
+            thread_id=thread_id,
+            assistant_id=assistant_id,
+            stream=True,
+        ),
+    )
+
+    assistant_reply_box = st.empty()
+    assistant_reply = ""
+
+    for event in stream:
+        if isinstance(event, ThreadMessageDelta):
+            if isinstance(event.data.delta.content[0], TextDeltaBlock):
+                assistant_reply += event.data.delta.content[0].text.value
+                assistant_reply_box.markdown(assistant_reply)
+
     return assistant_reply
