@@ -1,6 +1,6 @@
 # RAG Demo on Streamlit
 
-![](screenshot.png)
+![](img/menu.png)![](img/chat.png)![](img/viz.png)
 
 ## Quick Start
 
